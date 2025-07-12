@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useRef, useState, RefObject } from 'react';
 import { usePodcastStore } from '../store/podcastStore';
 import { 
