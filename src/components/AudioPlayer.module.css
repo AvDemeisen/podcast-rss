@@ -1,0 +1,11 @@
+.audioPlayer {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (max-width: 600px) {
+  .audioPlayer {
+    padding: 8px;
+  }
+} 
