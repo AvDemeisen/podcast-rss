@@ -33,6 +33,7 @@ export interface AppState {
   feeds: PodcastFeed[];
   player: PlayerState;
   hiddenEpisodes: Set<string>;
+  episodeProgress: Record<string, number>; // episodeId -> currentTime
   isLoading: boolean;
   error: string | null;
 } 

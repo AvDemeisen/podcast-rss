@@ -6,6 +6,7 @@ import { PODCAST_FEEDS } from '../config/podcasts';
 interface PodcastStore extends AppState {
   // Actions
   initializeFeeds: () => Promise<void>;
+  setFeeds: (feeds: AppState['feeds']) => void;
   setPlayerState: (state: Partial<PlayerState>) => void;
   playEpisode: (episode: PodcastEpisode) => void;
   pauseEpisode: () => void;
@@ -17,6 +18,8 @@ interface PodcastStore extends AppState {
   toggleMute: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  saveEpisodeProgress: (episodeId: string, currentTime: number) => void;
+  resetPlayer: () => void;
 }
 
 export const usePodcastStore = create<PodcastStore>()(
@@ -33,6 +36,7 @@ export const usePodcastStore = create<PodcastStore>()(
         isMuted: false,
       },
       hiddenEpisodes: new Set(),
+      episodeProgress: {},
       isLoading: false,
       error: null,
 
@@ -65,11 +69,18 @@ export const usePodcastStore = create<PodcastStore>()(
       },
 
       playEpisode: (episode) => {
+        // Validate episode has required fields
+        if (!episode || !episode.audioUrl) {
+          console.error('Invalid episode for playback:', episode);
+          return;
+        }
+        
         set((state) => ({
           player: {
             ...state.player,
             currentEpisode: episode,
             isPlaying: true,
+            currentTime: 0, // Reset time when starting new episode
           },
         }));
       },
@@ -84,6 +95,12 @@ export const usePodcastStore = create<PodcastStore>()(
       },
 
       updateCurrentTime: (time) => {
+        // Validate time value
+        if (typeof time !== 'number' || time < 0) {
+          console.error('Invalid time value:', time);
+          return;
+        }
+        
         set((state) => ({
           player: {
             ...state.player,
@@ -120,10 +137,12 @@ export const usePodcastStore = create<PodcastStore>()(
       },
 
       setVolume: (volume) => {
+        // Clamp volume between 0 and 1
+        const clampedVolume = Math.max(0, Math.min(1, volume));
         set((state) => ({
           player: {
             ...state.player,
-            volume,
+            volume: clampedVolume,
           },
         }));
       },
@@ -144,6 +163,37 @@ export const usePodcastStore = create<PodcastStore>()(
       setError: (error) => {
         set({ error });
       },
+
+      setFeeds: (feeds) => {
+        set({ feeds });
+      },
+
+      saveEpisodeProgress: (episodeId, currentTime) => {
+        // Validate inputs
+        if (!episodeId || typeof currentTime !== 'number' || currentTime < 0) {
+          console.error('Invalid progress data:', { episodeId, currentTime });
+          return;
+        }
+        
+        set((state) => ({
+          episodeProgress: {
+            ...state.episodeProgress,
+            [episodeId]: currentTime,
+          },
+        }));
+      },
+
+      resetPlayer: () => {
+        set((state) => ({
+          player: {
+            ...state.player,
+            currentEpisode: null,
+            isPlaying: false,
+            currentTime: 0,
+            duration: 0,
+          },
+        }));
+      },
     }),
     {
       name: 'podcast-store',
@@ -151,6 +201,7 @@ export const usePodcastStore = create<PodcastStore>()(
         feeds: state.feeds,
         player: state.player,
         hiddenEpisodes: Array.from(state.hiddenEpisodes),
+        episodeProgress: state.episodeProgress,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

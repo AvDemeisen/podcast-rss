@@ -1,60 +1,68 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import Head from 'next/head';
 import {
   Container,
   Box,
   Typography,
-  Card,
-  CardContent,
-  Avatar,
   IconButton,
   Alert,
   CircularProgress,
 } from '@mui/material';
-import {
-  PlayArrow,
-  Pause,
-  VisibilityOff,
-  Visibility,
-  CheckCircle,
-  RadioButtonUnchecked,
-} from '@mui/icons-material';
-import { format } from 'date-fns';
 import { usePodcastStore } from '../store/podcastStore';
-import { PodcastEpisode } from '../types/podcast';
+import { useFeedManager } from '../hooks/useFeedManager';
+import { useEpisodeManager } from '../hooks/useEpisodeManager';
+import { isValidEpisode } from '../utils/validators';
+import { UI_CONSTANTS } from '../constants/ui';
 import AudioPlayer from '../components/AudioPlayer';
 import styles from './page.module.css';
+import PodcastList from '../components/PodcastList';
+import EpisodeList from '../components/EpisodeList';
 
 export default function Home() {
-  const [isHydrated, setIsHydrated] = useState(false);
-  const {
-    feeds,
-    player,
-    hiddenEpisodes,
-    isLoading,
-    error,
-    initializeFeeds,
-    playEpisode,
-    hideEpisode,
-    showEpisode,
-    markEpisodeAsPlayed,
-  } = usePodcastStore();
+  const [feedState, feedActions] = useFeedManager();
+  const [episodeState, episodeActions] = useEpisodeManager(UI_CONSTANTS.EPISODES_PER_PAGE);
+  const [selectedPodcast, setSelectedPodcast] = useState<string | null>(null);
+  
+  const { hiddenEpisodes, hideEpisode, showEpisode, player } = usePodcastStore();
+  const currentEpisode = player.currentEpisode;
+  const isPlaying = player.isPlaying && currentEpisode;
 
-  // Wait for hydration to complete
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+  // Get unique podcasts from episodes
+  const podcasts = episodeState.allEpisodes
+    .reduce((acc, episode) => {
+      const existingPodcast = acc.find(p => p.title === episode.feedTitle);
+      if (!existingPodcast) {
+        acc.push({
+          title: episode.feedTitle,
+          url: episode.feedUrl,
+          imageUrl: episode.imageUrl,
+          episodeCount: episodeState.allEpisodes.filter(ep => ep.feedTitle === episode.feedTitle).length,
+        });
+      }
+      return acc;
+    }, [] as Array<{ title: string; url: string; imageUrl?: string; episodeCount: number }>);
 
-  // Initialize feeds on component mount after hydration
-  useEffect(() => {
-    if (isHydrated && feeds.length === 0) {
-      initializeFeeds();
-    }
-  }, [isHydrated, feeds.length, initializeFeeds]);
+  // Filter episodes based on selected podcast
+  const filteredEpisodes = selectedPodcast 
+    ? episodeState.allEpisodes.filter(episode => episode.feedTitle === selectedPodcast)
+    : episodeState.allEpisodes;
+
+  // Update episode manager with filtered episodes
+  const displayEpisodes = selectedPodcast 
+    ? filteredEpisodes.slice((episodeState.currentPage - 1) * UI_CONSTANTS.EPISODES_PER_PAGE, episodeState.currentPage * UI_CONSTANTS.EPISODES_PER_PAGE)
+    : episodeState.currentEpisodes;
+
+  const totalPages = Math.ceil(filteredEpisodes.length / UI_CONSTANTS.EPISODES_PER_PAGE);
+
+  const handlePodcastSelect = (podcastTitle: string | null) => {
+    setSelectedPodcast(podcastTitle);
+    episodeActions.setCurrentPage(1); // Reset to first page when filtering
+  };
 
   // Don't render until hydrated to prevent mismatch
-  if (!isHydrated) {
+  if (!feedState.isLoading && episodeState.allEpisodes.length === 0) {
     return (
       <Container maxWidth="md" className={styles.container}>
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -64,196 +72,94 @@ export default function Home() {
     );
   }
 
-  // Combine all episodes and sort by date
-  const allEpisodes = feeds
-    .flatMap(feed => feed.episodes)
-    .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
-
-  const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatDate = (date: Date | string) => {
-    try {
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      if (isNaN(dateObj.getTime())) {
-        return 'Unknown date';
-      }
-      return format(dateObj, 'MMM d, yyyy');
-    } catch {
-      return 'Unknown date';
-    }
-  };
-
-  const handlePlayEpisode = (episode: PodcastEpisode) => {
-    playEpisode(episode);
-    markEpisodeAsPlayed(episode.id);
-  };
-
-  const isCurrentlyPlaying = (episode: PodcastEpisode) => {
-    return player.currentEpisode?.id === episode.id && player.isPlaying;
+  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+    episodeActions.setCurrentPage(page);
   };
 
   return (
-    <Container maxWidth="md" className={styles.container}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Podcast RSS Player
-        </Typography>
-        
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
+    <>
+      <Head>
+        <title>
+          {isPlaying ? `${currentEpisode.title} | ${currentEpisode.feedTitle}` : 'Podcast RSS Player'}
+        </title>
+        {isPlaying && currentEpisode.imageUrl && (
+          <meta property="og:image" content={currentEpisode.imageUrl} />
         )}
-
-        {feeds.length > 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {feeds.length} feed{feeds.length !== 1 ? 's' : ''} • {allEpisodes.length} episodes
+        {isPlaying && (
+          <meta name="description" content={currentEpisode.title} />
+        )}
+      </Head>
+      <Container maxWidth="md" className={styles.container}>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Podcast RSS Player
           </Typography>
-        )}
-
-        {feeds.length > 0 && (
-          <Box sx={{ mb: 3, display: { xs: 'none', md: 'block' } }}>
-            <Typography variant="h6" gutterBottom>
-              Feeds
-            </Typography>
-            {feeds.map((feed) => (
-              <Card key={feed.url} sx={{ mb: 1 }}>
-                <CardContent sx={{ py: 1.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {feed.imageUrl && (
-                      <Avatar src={feed.imageUrl} sx={{ width: 32, height: 32 }}>
-                        {feed.title.charAt(0)}
-                      </Avatar>
-                    )}
-                    <Box>
-                      <Typography variant="subtitle2">{feed.title}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {feed.episodes.length} episodes
-                      </Typography>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
-        )}
-
-        {allEpisodes.length > 0 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Episodes
-            </Typography>
-            {allEpisodes.map((episode) => {
-              const isHidden = hiddenEpisodes.has(episode.id);
-              return (
-                <Card 
-                  key={episode.id} 
-                  sx={{ 
-                    mb: 1,
-                    opacity: isHidden ? 0.5 : 1,
-                    transition: 'opacity 0.2s ease-in-out'
-                  }}
+          
+          {feedState.error && (
+            <Alert 
+              severity="error" 
+              sx={{ mb: 2 }}
+              action={
+                <IconButton
+                  color="inherit"
+                  size="small"
+                  onClick={feedActions.retryLoad}
                 >
-                  <CardContent sx={{ py: { xs: 1, md: 1.5 } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 2 } }}>
-                    <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Typography 
-                          variant="subtitle2" 
-                          sx={{ 
-                            flex: 1,
-                            fontSize: { xs: '0.875rem', md: '1rem' }
-                          }}
-                        >
-                          {episode.title}
-                        </Typography>
-                        {episode.isPlayed ? (
-                          <CheckCircle color="success" fontSize="small" />
-                        ) : (
-                          <RadioButtonUnchecked color="disabled" fontSize="small" />
-                        )}
-                      </Box>
-                      
-                      <Typography 
-                        variant="body2" 
-                        color="text.secondary" 
-                        sx={{ 
-                          mb: 1,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' }
-                        }}
-                      >
-                        {episode.feedTitle} • {formatDate(episode.pubDate)} • {formatDuration(episode.duration)}
-                      </Typography>
-                      
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          mb: 1,
-                          display: { xs: 'none', md: 'block' } // Hide on mobile
-                        }}
-                      >
-                        {episode.description.length > 150
-                          ? `${episode.description.substring(0, 150)}...`
-                          : episode.description}
-                      </Typography>
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <IconButton
-                        onClick={() => handlePlayEpisode(episode)}
-                        color={isCurrentlyPlaying(episode) ? 'primary' : 'default'}
-                        disabled={isHidden}
-                      >
-                        {isCurrentlyPlaying(episode) ? <Pause /> : <PlayArrow />}
-                      </IconButton>
-                      
-                      <IconButton
-                        size="small"
-                        onClick={() => isHidden ? showEpisode(episode.id) : hideEpisode(episode.id)}
-                        color={isHidden ? 'primary' : 'default'}
-                      >
-                        {isHidden ? <Visibility fontSize="small" /> : <VisibilityOff fontSize="small" />}
-                      </IconButton>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            );
-            })}
-          </Box>
-        )}
+                  Retry
+                </IconButton>
+              }
+            >
+              {feedState.error}
+            </Alert>
+          )}
 
-        {feeds.length === 0 && !isLoading && (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              No podcasts yet
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Loading your configured podcast feeds...
-            </Typography>
-          </Box>
-        )}
+          {feedState.feedsCount > 0 && (
+            <PodcastList
+              podcasts={podcasts}
+              selectedPodcast={selectedPodcast}
+              onSelect={handlePodcastSelect}
+              allCount={episodeState.allEpisodes.length}
+            />
+          )}
 
-        {isLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
-      </Box>
+          {displayEpisodes.length > 0 && (
+            <EpisodeList
+              episodes={displayEpisodes}
+              filteredEpisodes={filteredEpisodes}
+              currentPage={episodeState.currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              episodeActions={episodeActions}
+              hiddenEpisodes={hiddenEpisodes}
+              showEpisode={showEpisode}
+              hideEpisode={hideEpisode}
+              isCurrentlyPlaying={episodeActions.isCurrentlyPlaying}
+              handlePlayEpisode={episodeActions.handlePlayEpisode}
+              isValidEpisode={isValidEpisode}
+            />
+          )}
 
-      {/* Audio Player */}
-      {player.currentEpisode && (
+          {feedState.feedsCount === 0 && !feedState.isLoading && (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No podcasts yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Loading your configured podcast feeds...
+              </Typography>
+            </Box>
+          )}
+
+          {feedState.isLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+        </Box>
+
+        {/* Audio Player */}
         <AudioPlayer />
-      )}
-    </Container>
+      </Container>
+    </>
   );
 }

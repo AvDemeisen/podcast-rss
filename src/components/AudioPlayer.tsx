@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import {
   Box,
   Paper,
@@ -8,164 +8,28 @@ import {
   Typography,
   Slider,
   Avatar,
+  CircularProgress,
 } from '@mui/material';
 import {
   PlayArrow,
   Pause,
   SkipPrevious,
   SkipNext,
-  VolumeUp,
-  VolumeOff,
 } from '@mui/icons-material';
 import { usePodcastStore } from '../store/podcastStore';
+import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { useEpisodeManager } from '../hooks/useEpisodeManager';
+import { formatTime } from '../utils/formatters';
 
 import styles from './AudioPlayer.module.css';
 
 export default function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [isReady, setIsReady] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
-  const {
-    player,
-    feeds,
-    setPlayerState,
-    pauseEpisode,
-    updateCurrentTime,
-    setVolume,
-    toggleMute,
-  } = usePodcastStore();
-
+  const [audioState, audioActions] = useAudioPlayer(audioRef);
+  const [, episodeActions] = useEpisodeManager();
+  
+  const { player, updateCurrentTime } = usePodcastStore();
   const currentEpisode = player.currentEpisode;
-
-  useEffect(() => {
-    if (audioRef.current && currentEpisode) {
-      // Reset state
-      setIsReady(false);
-      setAudioError(null);
-      
-      // Pause current audio before loading new source
-      audioRef.current.pause();
-      
-      // Set new source
-      audioRef.current.src = currentEpisode.audioUrl;
-      audioRef.current.volume = player.volume;
-      audioRef.current.muted = player.isMuted;
-      
-      // Load the new audio
-      audioRef.current.load();
-      
-      if (player.isPlaying) {
-        // Use a small delay to ensure the audio is loaded
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            console.log('Audio play error:', error);
-            setAudioError('Failed to play audio');
-            setPlayerState({ isPlaying: false });
-          });
-        }
-      }
-    }
-  }, [currentEpisode?.audioUrl]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = player.volume;
-      audioRef.current.muted = player.isMuted;
-    }
-  }, [player.volume, player.isMuted]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      if (player.isPlaying) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            console.log('Audio play error:', error);
-            setAudioError('Failed to play audio');
-            setPlayerState({ isPlaying: false });
-          });
-        }
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [player.isPlaying]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
-    };
-  }, []);
-
-  const handlePlayPause = () => {
-    if (player.isPlaying) {
-      pauseEpisode();
-    } else {
-      setPlayerState({ isPlaying: true });
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      updateCurrentTime(audioRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setPlayerState({ duration: audioRef.current.duration });
-      setIsReady(true);
-      setAudioError(null);
-    }
-  };
-
-  const handleSeek = (value: number | number[]) => {
-    const newTime = Array.isArray(value) ? value[0] : value;
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-      updateCurrentTime(newTime);
-    }
-  };
-
-  const handleVolumeChange = (value: number | number[]) => {
-    const newVolume = Array.isArray(value) ? value[0] : value;
-    setVolume(newVolume);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const getCurrentEpisodeIndex = () => {
-    if (!currentEpisode) return -1;
-    const allEpisodes = feeds.flatMap(feed => feed.episodes);
-    return allEpisodes.findIndex(ep => ep.id === currentEpisode.id);
-  };
-
-  const playNext = () => {
-    const allEpisodes = feeds.flatMap(feed => feed.episodes);
-    const currentIndex = getCurrentEpisodeIndex();
-    if (currentIndex < allEpisodes.length - 1) {
-      const nextEpisode = allEpisodes[currentIndex + 1];
-      usePodcastStore.getState().playEpisode(nextEpisode);
-    }
-  };
-
-  const playPrevious = () => {
-    const allEpisodes = feeds.flatMap(feed => feed.episodes);
-    const currentIndex = getCurrentEpisodeIndex();
-    if (currentIndex > 0) {
-      const prevEpisode = allEpisodes[currentIndex - 1];
-      usePodcastStore.getState().playEpisode(prevEpisode);
-    }
-  };
 
   if (!currentEpisode) return null;
 
@@ -185,17 +49,18 @@ export default function AudioPlayer() {
       }}
     >
       <audio
+        key={currentEpisode.id}
         ref={audioRef}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => {
-          setPlayerState({ isPlaying: false });
-          playNext();
+        onTimeUpdate={() => {
+          if (audioRef.current) {
+            updateCurrentTime(audioRef.current.currentTime);
+          }
         }}
-        onError={() => {
-          setAudioError('Failed to load audio');
-          setIsReady(false);
-        }}
+        onLoadedMetadata={audioActions.handleLoadedMetadata}
+        onCanPlay={audioActions.handleCanPlay}
+        onEnded={audioActions.handleEnded}
+        onError={audioActions.handleError}
+        onAbort={audioActions.handleAbort}
       />
       
       <Box sx={{ p: { xs: 1, md: 2 } }}>
@@ -219,37 +84,44 @@ export default function AudioPlayer() {
                 ? currentEpisode.pubDate.toLocaleDateString()
                 : new Date(currentEpisode.pubDate).toLocaleDateString()}
             </Typography>
-            {audioError && (
+            {audioState.error && (
               <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                {audioError}
+                {audioState.error.message}
               </Typography>
             )}
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 } }}>
             <IconButton 
-              onClick={playPrevious} 
-              disabled={getCurrentEpisodeIndex() <= 0}
+              onClick={episodeActions.playPrevious} 
+              disabled={episodeActions.getCurrentEpisodeIndex() <= 0 || audioState.isLoading}
               size="small"
             >
               <SkipPrevious />
             </IconButton>
             
             <IconButton 
-              onClick={handlePlayPause} 
+              onClick={audioActions.handlePlayPause} 
               color="primary" 
               size="large"
+              disabled={audioState.isLoading || !audioState.isReady}
               sx={{ 
                 width: { xs: 40, md: 48 }, 
                 height: { xs: 40, md: 48 } 
               }}
             >
-              {player.isPlaying ? <Pause /> : <PlayArrow />}
+              {audioState.isLoading ? (
+                <CircularProgress size={20} />
+              ) : player.isPlaying ? (
+                <Pause />
+              ) : (
+                <PlayArrow />
+              )}
             </IconButton>
             
             <IconButton 
-              onClick={playNext} 
-              disabled={getCurrentEpisodeIndex() >= feeds.flatMap(f => f.episodes).length - 1}
+              onClick={episodeActions.playNext} 
+              disabled={episodeActions.getCurrentEpisodeIndex() >= 999 || audioState.isLoading} // TODO: Get actual episode count
               size="small"
             >
               <SkipNext />
@@ -257,7 +129,7 @@ export default function AudioPlayer() {
           </Box>
         </Box>
         
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
           <Typography variant="caption" sx={{ minWidth: 40 }}>
             {formatTime(player.currentTime)}
           </Typography>
@@ -265,28 +137,14 @@ export default function AudioPlayer() {
           <Slider
             value={player.currentTime}
             max={player.duration || 100}
-            onChange={(_, value) => handleSeek(value)}
-            sx={{ flex: 1 }}
-            disabled={!isReady}
+            onChange={(_, value) => audioActions.handleSeek(value)}
+            sx={{ flex: 1, mx: { xs: 0, md: 2 }, minWidth: 0 }}
+            disabled={!audioState.isReady || audioState.isLoading}
           />
           
           <Typography variant="caption" sx={{ minWidth: 40 }}>
             {formatTime(player.duration)}
           </Typography>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-            <IconButton onClick={toggleMute} size="small">
-              {player.isMuted ? <VolumeOff /> : <VolumeUp />}
-            </IconButton>
-            
-            <Slider
-              value={player.isMuted ? 0 : player.volume}
-              max={1}
-              step={0.1}
-              onChange={(_, value) => handleVolumeChange(value)}
-              sx={{ width: 80 }}
-            />
-          </Box>
         </Box>
       </Box>
     </Paper>
