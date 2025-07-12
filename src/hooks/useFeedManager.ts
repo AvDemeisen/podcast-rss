@@ -9,6 +9,7 @@ export interface FeedManagerState {
   error: string | null;
   feedsCount: number;
   episodesCount: number;
+  playerHydrated: boolean;
 }
 
 export interface FeedManagerActions {
@@ -18,6 +19,7 @@ export interface FeedManagerActions {
 
 export const useFeedManager = (): [FeedManagerState, FeedManagerActions] => {
   const [isHydrated, setIsHydrated] = useState(false);
+  const [playerHydrated, setPlayerHydrated] = useState(false);
   
   const {
     feeds,
@@ -26,6 +28,9 @@ export const useFeedManager = (): [FeedManagerState, FeedManagerActions] => {
     setLoading,
     setError,
     setFeeds,
+    player,
+    setPlayerState,
+    episodeProgress,
   } = usePodcastStore();
 
   // Wait for hydration to complete
@@ -39,6 +44,28 @@ export const useFeedManager = (): [FeedManagerState, FeedManagerActions] => {
       initializeFeeds();
     }
   }, [isHydrated, feeds.length]);
+
+  // After feeds are loaded, restore player state with correct episode object
+  useEffect(() => {
+    if (feeds.length > 0) {
+      if (player.currentEpisode) {
+        const allEpisodes = feeds.flatMap(feed => feed.episodes);
+        const match = allEpisodes.find(ep => ep.id === player.currentEpisode?.id);
+        if (match) {
+          setPlayerState({ currentEpisode: match });
+          // Restore currentTime if available
+          const saved = episodeProgress[match.id];
+          if (typeof saved === 'number' && saved > 0) {
+            setPlayerState({ currentTime: saved });
+          }
+        } else {
+          // Episode not found in new feeds, clear player
+          setPlayerState({ currentEpisode: null, isPlaying: false, currentTime: 0, duration: 0 });
+        }
+      }
+      setPlayerHydrated(true);
+    }
+  }, [feeds, player.currentEpisode?.id]);
 
   const initializeFeeds = async (): Promise<void> => {
     setLoading(true);
@@ -69,6 +96,7 @@ export const useFeedManager = (): [FeedManagerState, FeedManagerActions] => {
     error,
     feedsCount,
     episodesCount,
+    playerHydrated,
   };
 
   const actions: FeedManagerActions = {

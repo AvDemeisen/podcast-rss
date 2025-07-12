@@ -95,6 +95,17 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
       audio.currentTime = savedProgress;
       updateCurrentTime(savedProgress);
     }
+
+    if ('mediaSession' in navigator && currentEpisode) {
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: currentEpisode.title,
+        artist: currentEpisode.feedTitle,
+        album: currentEpisode.feedTitle,
+        artwork: [
+          { src: currentEpisode.imageUrl ?? '', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+    }
   }, [currentEpisode?.id, currentEpisode?.audioUrl, player.volume, player.isMuted, episodeProgress, updateCurrentTime, audioRef]);
 
   // Handle volume/mute changes

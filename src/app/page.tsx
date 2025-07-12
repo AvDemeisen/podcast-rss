@@ -158,7 +158,7 @@ export default function Home() {
         </Box>
 
         {/* Audio Player */}
-        <AudioPlayer />
+        {feedState.playerHydrated && player.currentEpisode && <AudioPlayer />}
       </Container>
     </>
   );
