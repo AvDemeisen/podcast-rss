@@ -31,6 +31,7 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
   const [error, setError] = useState<AudioError | null>(null);
   const lastSaveTimeRef = useRef(0);
   const playAttemptRef = useRef<Promise<void> | null>(null);
+  const isPlayingRef = useRef(false);
 
   const {
     playerState,
@@ -131,6 +132,11 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
     const audio = audioRef.current;
     if (!audio || !isReady || isLoading) return;
 
+    // Prevent duplicate play/pause calls
+    if (isPlayingRef.current === playerState.isPlaying) return;
+    
+    isPlayingRef.current = playerState.isPlaying;
+
     if (playerState.isPlaying) {
       // Cancel any existing play attempt
       if (playAttemptRef.current) {
@@ -154,7 +160,7 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
         playAttemptRef.current = Promise.resolve();
       }
     }
-  }, [playerState.isPlaying, isReady, isLoading, pauseEpisode, currentEpisode?.id, audioRef]);
+  }, [playerState.isPlaying, isReady, isLoading, currentEpisode?.id, audioRef]);
 
   // Save progress every few seconds while playing
   useEffect(() => {
@@ -196,11 +202,13 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
       if (currentEpisode) {
         saveEpisodeProgress(currentEpisode.id, playerState.currentTime);
       }
+      isPlayingRef.current = false;
       pauseEpisode();
     } else {
       // We need to update the player state to reflect play
       // This will be handled by the playEpisode function
       if (currentEpisode) {
+        isPlayingRef.current = true;
         playEpisode(currentEpisode);
       }
     }

@@ -1,6 +1,37 @@
 :root {
+  /* Colors */
   --background: #ffffff;
   --foreground: #171717;
+  --card-bg: #181818;
+  --card-bg-secondary: #222;
+  --text-secondary: #e0e0e0;
+  --overlay-bg: rgba(0, 0, 0, 0.62);
+  --overlay-bg-light: rgba(0, 0, 0, 0.35);
+  --border-color: #333;
+  --primary-color: #1976d2;
+  
+  /* Sizes */
+  --card-size: 165px;
+  --episode-image-size: 110px;
+  --border-radius-small: 4px;
+  --border-radius-medium: 12px;
+  --border-radius-large: 16px;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 10px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 24px;
+  
+  /* Shadows */
+  --shadow-light: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-medium: 0 2px 8px rgba(0,0,0,0.10);
+  --shadow-heavy: 0 4px 16px rgba(0,0,0,0.12);
+  
+  /* Transitions */
+  --transition-fast: 0.2s;
 }
 
 @media (prefers-color-scheme: dark) {

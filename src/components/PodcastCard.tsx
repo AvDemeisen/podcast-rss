@@ -1,4 +1,4 @@
-import { Card, Avatar, Typography } from '@mui/material';
+import { Card } from '@mui/material';
 import React from 'react';
 import Image from 'next/image';
 import styles from './PodcastCard.module.css';
@@ -12,16 +12,15 @@ interface PodcastCardProps {
   isAll?: boolean;
 }
 
-const PodcastCard: React.FC<PodcastCardProps> = ({ imageUrl, title, episodeCount, selected, onClick, isAll }) => (
+const PodcastCard: React.FC<PodcastCardProps> = ({ imageUrl, title, selected, onClick, isAll }) => (
   <Card
-    className={styles.card}
-    style={{ border: selected ? '2px solid #1976d2' : '1px solid #333' }}
+    className={`${styles.card} ${selected ? styles.selected : ''}`}
     onClick={onClick}
   >
     {isAll ? (
-      <Avatar className={styles.avatar}>
-        All
-      </Avatar>
+      <div className={`${styles.avatar} ${styles.allButton}`}>
+        ALL
+      </div>
     ) : imageUrl ? (
       <Image
         src={imageUrl}
@@ -32,18 +31,18 @@ const PodcastCard: React.FC<PodcastCardProps> = ({ imageUrl, title, episodeCount
         unoptimized
       />
     ) : (
-      <Avatar className={styles.avatar}>
+      <div className={styles.avatar}>
         {title.charAt(0)}
-      </Avatar>
+      </div>
     )}
-    <div className={styles.overlayText}>
-      {/* <Typography variant="subtitle2" className={styles.title}>
+    {/* <div className={styles.overlayText}>
+      <Typography variant="subtitle2" className={styles.title}>
         {title}
-      </Typography> */}
+      </Typography>
       <Typography variant="caption" className={styles.episodeCount}>
         {episodeCount} episodes
       </Typography>
-    </div>
+    </div> */}
   </Card>
 );
 

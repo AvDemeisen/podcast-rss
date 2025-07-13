@@ -1,29 +1,29 @@
 .episodeCard {
-  transition: box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-  border-radius: 16px;
+  transition: box-shadow var(--transition-fast);
+  box-shadow: var(--shadow-medium);
+  border-radius: var(--border-radius-large);
   overflow: hidden;
   position: relative;
 }
 
 .cardContent {
-  padding: 20px 24px;
+  padding: var(--spacing-md) var(--spacing-lg);
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 24px;
+  gap: var(--spacing-xxl);
   min-height: 140px;
 }
 
 .imageWrapper {
   position: relative;
-  width: 110px;
-  height: 110px;
-  min-width: 110px;
-  min-height: 110px;
-  border-radius: 12px;
+  width: var(--episode-image-size);
+  height: var(--episode-image-size);
+  min-width: var(--episode-image-size);
+  min-height: var(--episode-image-size);
+  border-radius: var(--border-radius-medium);
   overflow: hidden;
-  background: #222;
+  background: var(--card-bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,7 +33,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: var(--border-radius-medium);
   display: block;
 }
 
@@ -43,9 +43,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.35);
+  background: var(--overlay-bg-light);
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--transition-fast);
   color: #fff;
   font-size: 3rem;
   pointer-events: none;
@@ -62,12 +62,12 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .statusRow {
-  margin-top: 8px;
+  margin-top: var(--spacing-sm);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 } 

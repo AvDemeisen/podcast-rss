@@ -66,16 +66,21 @@ export const usePlayerState = () => {
       feedTitle: episode.feedTitle,
     });
     
-    setPlayerState(prev => ({
-      ...prev,
-      currentEpisode: episode,
-      isPlaying: true,
-      currentTime: 0, // Reset time when starting new episode
-    }));
+    setPlayerState(prev => {
+      // If it's the same episode, preserve the current time
+      const isSameEpisode = prev.currentEpisode?.id === episode.id;
+      return {
+        ...prev,
+        currentEpisode: episode,
+        isPlaying: true,
+        currentTime: isSameEpisode ? prev.currentTime : 0, // Only reset time for new episodes
+      };
+    });
     
     // Save to localStorage
-    saveToStorage(episode, 0, episodeProgress);
-  }, [episodeProgress, saveToStorage]);
+    const isSameEpisode = playerState.currentEpisode?.id === episode.id;
+    saveToStorage(episode, isSameEpisode ? playerState.currentTime : 0, episodeProgress);
+  }, [episodeProgress, saveToStorage, playerState.currentEpisode?.id, playerState.currentTime]);
 
   // Pause episode
   const pauseEpisode = useCallback(() => {

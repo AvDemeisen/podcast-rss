@@ -1,39 +1,156 @@
 .card {
-  width: 175px;
-  min-width: 175px;
-  height: 175px;
+  width: var(--card-size);
+  min-width: var(--card-size);
+  height: var(--card-size);
   position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
   cursor: pointer;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  background: #181818;
+  border-radius: var(--border-radius-small);
+  box-shadow: var(--shadow-light);
+  background: var(--card-bg);
   overflow: hidden;
   padding: 0;
-  transition: box-shadow 0.2s;
+  transition: all var(--transition-fast);
+  border: 2px solid transparent;
 }
 
 .card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-heavy);
+  transform: translateY(-2px);
+}
+
+.card.selected {
+  border: 3px solid var(--primary-color);
+  box-shadow: 
+    0 8px 32px rgba(25, 118, 210, 0.3),
+    0 0 20px rgba(25, 118, 210, 0.2);
+  transform: translateY(-4px);
+  animation: selectedCardPulse 2s ease-in-out infinite;
+}
+
+.card.selected:hover {
+  box-shadow: 
+    0 12px 40px rgba(25, 118, 210, 0.4),
+    0 0 30px rgba(25, 118, 210, 0.3);
+  transform: translateY(-6px);
+}
+
+@keyframes selectedCardPulse {
+  0%, 100% {
+    box-shadow: 
+      0 8px 32px rgba(25, 118, 210, 0.3),
+      0 0 20px rgba(25, 118, 210, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 8px 32px rgba(25, 118, 210, 0.4),
+      0 0 30px rgba(25, 118, 210, 0.3);
+  }
 }
 
 .avatar {
-  width: 175px !important;
-  height: 175px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--card-size) !important;
+  height: var(--card-size) !important;
   font-size: 32px !important;
   position: absolute;
   top: 0;
   left: 0;
 }
 
+.allButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  color: white;
+  font-weight: 800;
+  font-size: 32px !important;
+  letter-spacing: 3px;
+  text-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 
+    0 8px 32px rgba(102, 126, 234, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 20px rgba(240, 147, 251, 0.3);
+  border-radius: var(--border-radius-small);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  animation: allButtonGlow 3s ease-in-out infinite alternate;
+}
+
+.allButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.6s ease-out;
+}
+
+.allButton::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: allButtonRotate 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.allButton:hover::before {
+  left: 100%;
+}
+
+.allButton:hover::after {
+  opacity: 1;
+}
+
+.allButton:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    0 16px 48px rgba(102, 126, 234, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 30px rgba(240, 147, 251, 0.5);
+  animation: allButtonGlow 1s ease-in-out infinite alternate;
+}
+
+@keyframes allButtonGlow {
+  0% {
+    box-shadow: 
+      0 8px 32px rgba(102, 126, 234, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 20px rgba(240, 147, 251, 0.3);
+  }
+  100% {
+    box-shadow: 
+      0 8px 32px rgba(102, 126, 234, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 0 30px rgba(240, 147, 251, 0.5);
+  }
+}
+
+@keyframes allButtonRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
+  border-top-left-radius: var(--border-radius-small);
+  border-top-right-radius: var(--border-radius-small);
   display: block;
   position: absolute;
   top: 0;
@@ -45,9 +162,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.62);
+  background: var(--overlay-bg);
   color: #fff;
-  padding: 10px 10px 6px 10px;
+  padding: var(--spacing-md) var(--spacing-md) 6px var(--spacing-md);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -60,8 +177,7 @@
   font-weight: 500;
   word-break: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+
   overflow: hidden;
   font-size: 0.95rem;
   line-height: 1.15;
@@ -72,5 +188,5 @@
 .episodeCount {
   font-size: 0.72rem;
   font-weight: 400;
-  color: #e0e0e0;
+  color: var(--text-secondary);
 } 

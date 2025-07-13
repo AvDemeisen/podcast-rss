@@ -1,13 +1,13 @@
 'use client';
 
 import { useRef } from 'react';
+import Image from 'next/image';
 import {
   Box,
   Paper,
   IconButton,
   Typography,
   Slider,
-  Avatar,
   CircularProgress,
 } from '@mui/material';
 import {
@@ -61,33 +61,29 @@ export default function AudioPlayer() {
         onAbort={audioActions.handleAbort}
       />
       
-      <Box sx={{ p: { xs: 1, md: 2 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 }, mb: { xs: 1, md: 2 } }}>
-          <Avatar
-            src={currentEpisode.imageUrl}
-            sx={{ width: { xs: 40, md: 56 }, height: { xs: 40, md: 56 } }}
-          >
-            {currentEpisode.title.charAt(0)}
-          </Avatar>
+      <Box sx={{ p: { xs: 0.5, md: 1 } }}>
+        {/* Episode title row */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 }, mb: { xs: 0.5, md: 1 } }}>
+          {currentEpisode.imageUrl && (
+            <Image
+              src={currentEpisode.imageUrl}
+              alt={currentEpisode.title}
+              width={56}
+              height={56}
+              unoptimized
+            />
+          )}
           
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" noWrap>
-              {currentEpisode.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" noWrap>
-              {currentEpisode.feedTitle}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {currentEpisode.pubDate instanceof Date 
-                ? currentEpisode.pubDate.toLocaleDateString()
-                : new Date(currentEpisode.pubDate).toLocaleDateString()}
-            </Typography>
-            {audioState.error && (
-              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                {audioState.error.message}
-              </Typography>
-            )}
-          </Box>
+          <Typography variant="subtitle1" sx={{ flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {currentEpisode.title}
+          </Typography>
+        </Box>
+
+        {/* Podcast title and controls row */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 }, mb: { xs: 0.5, md: 1 } }}>
+          <Typography variant="body2" color="text.secondary" noWrap sx={{ flex: 1 }}>
+            {currentEpisode.feedTitle}
+          </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 } }}>
             <IconButton 
@@ -124,6 +120,12 @@ export default function AudioPlayer() {
             </IconButton>
           </Box>
         </Box>
+
+        {audioState.error && (
+          <Typography variant="caption" color="error" sx={{ display: 'block', mb: { xs: 0.5, md: 1 } }}>
+            {audioState.error.message}
+          </Typography>
+        )}
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
           <Typography variant="caption" sx={{ minWidth: 40 }}>

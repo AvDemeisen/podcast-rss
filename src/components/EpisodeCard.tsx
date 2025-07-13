@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Box, Typography } from '@mui/material';
 import { PlayArrow, Pause } from '@mui/icons-material';
+import Image from 'next/image';
 import { PodcastEpisode } from '../types/podcast';
 import { formatDuration, formatDate, truncateText } from '../utils/formatters';
 import { UI_CONSTANTS } from '../constants/ui';
@@ -38,11 +39,20 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({ episode, isHidden, isPlaying,
   >
     <CardContent className={styles.cardContent}>
       <div className={styles.imageWrapper}>
-        <img
-          src={episode.imageUrl}
-          alt={episode.feedTitle}
-          className={styles.episodeImage}
-        />
+        {episode.imageUrl ? (
+          <Image
+            src={episode.imageUrl}
+            alt={episode.feedTitle}
+            width={110}
+            height={110}
+            className={styles.episodeImage}
+            unoptimized
+          />
+        ) : (
+          <div className={styles.episodeImage}>
+            {episode.feedTitle.charAt(0)}
+          </div>
+        )}
         <div className={styles.playOverlay}>
           {isPlaying ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
         </div>
