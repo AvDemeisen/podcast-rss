@@ -49,7 +49,6 @@ const EpisodeList: React.FC<EpisodeListProps> = ({
           isPlaying={isCurrentlyPlaying(episode)}
           isValid={isValid}
           onPlay={() => handlePlayEpisode(episode)}
-          onHideToggle={() => isHidden ? showEpisode(episode.id) : hideEpisode(episode.id)}
         />
       );
     })}

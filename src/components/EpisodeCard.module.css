@@ -1,16 +1,59 @@
+.episodeCard {
+  transition: box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
 .cardContent {
   padding: 20px 24px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 20px;
-  min-height: 96px;
+  gap: 24px;
+  min-height: 140px;
 }
 
-.avatar {
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
+.imageWrapper {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  min-width: 110px;
+  min-height: 110px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.episodeImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+}
+
+.playOverlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  opacity: 0;
+  transition: opacity 0.2s;
+  color: #fff;
+  font-size: 3rem;
+  pointer-events: none;
+}
+
+.episodeCard:hover .playOverlay,
+.episodeCard:focus .playOverlay {
+  opacity: 1;
 }
 
 .textBlock {
@@ -22,22 +65,9 @@
   gap: 4px;
 }
 
-.iconRow {
+.statusRow {
+  margin-top: 8px;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 12px;
-}
-
-.iconColumn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.playButton {
-  width: 48px !important;
-  height: 48px !important;
-  margin-right: 8px;
+  gap: 8px;
 } 

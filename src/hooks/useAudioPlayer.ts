@@ -145,6 +145,19 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
     }
   }, [player.isPlaying, isReady, isLoading, setPlayerState, currentEpisode?.id, audioRef]);
 
+  // Save progress every few seconds while playing
+  useEffect(() => {
+    if (!player.isPlaying || !currentEpisode) return;
+
+    const interval = setInterval(() => {
+      if (audioRef.current && player.currentTime > 0) {
+        saveEpisodeProgress(currentEpisode.id, player.currentTime);
+      }
+    }, 2000); // Save every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [player.isPlaying, currentEpisode, player.currentTime, saveEpisodeProgress]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import {
   Container,
@@ -28,6 +28,13 @@ export default function Home() {
   const { hiddenEpisodes, hideEpisode, showEpisode, player } = usePodcastStore();
   const currentEpisode = player.currentEpisode;
   const isPlaying = player.isPlaying && currentEpisode;
+
+  useEffect(() => {
+    // Log the initial zustand store state for debugging
+    const state = usePodcastStore.getState();
+    // eslint-disable-next-line no-console
+    console.log('Zustand initial state:', state);
+  }, []);
 
   // Get unique podcasts from episodes
   const podcasts = episodeState.allEpisodes
@@ -90,11 +97,7 @@ export default function Home() {
         )}
       </Head>
       <Container maxWidth="md" className={styles.container}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Podcast RSS Player
-          </Typography>
-          
+        <Box sx={{ mb: 3 }}>          
           {feedState.error && (
             <Alert 
               severity="error" 

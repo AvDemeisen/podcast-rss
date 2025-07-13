@@ -1,27 +1,76 @@
+.card {
+  width: 175px;
+  min-width: 175px;
+  height: 175px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  cursor: pointer;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  background: #181818;
+  overflow: hidden;
+  padding: 0;
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.avatar {
+  width: 175px !important;
+  height: 175px !important;
+  font-size: 32px !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 .image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
   display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
-.cardContent {
-  text-align: left;
+.overlayText {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  padding: 10px 10px 6px 10px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-  width: 100%;
-  padding: 16px;
+  z-index: 2;
+  /* min-height: 54px; */
+  box-sizing: border-box;
 }
 
 .title {
-  font-weight: 600;
+  font-weight: 500;
   word-break: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  font-size: 0.95rem;
+  line-height: 1.15;
+  min-height: 2.3em;
+  width: 100%;
+}
+
+.episodeCount {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #e0e0e0;
 } 

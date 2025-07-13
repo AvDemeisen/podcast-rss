@@ -27,6 +27,7 @@ export const useEpisodeManager = (episodesPerPage: number = 10): [EpisodeManager
     feeds,
     player,
     playEpisode,
+    pauseEpisode,
     markEpisodeAsPlayed,
   } = usePodcastStore();
 
@@ -75,8 +76,18 @@ export const useEpisodeManager = (episodesPerPage: number = 10): [EpisodeManager
       console.error('Invalid episode for playback:', episode);
       return;
     }
-    playEpisode(episode);
-    markEpisodeAsPlayed(episode.id);
+    if (player.currentEpisode?.id === episode.id) {
+      if (player.isPlaying) {
+        // Pause if already playing
+        pauseEpisode();
+      } else {
+        // Resume if paused
+        playEpisode(episode);
+      }
+    } else {
+      playEpisode(episode);
+      markEpisodeAsPlayed(episode.id);
+    }
   };
 
   const isCurrentlyPlaying = (episode: PodcastEpisode): boolean => {
