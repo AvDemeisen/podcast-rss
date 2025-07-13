@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AppState, PodcastEpisode, PlayerState } from '../types/podcast';
 import { PODCAST_FEEDS } from '../config/podcasts';
+import { storage } from '../utils/storage';
 
 interface PodcastStore extends AppState {
   // Actions
@@ -20,12 +21,7 @@ interface PodcastStore extends AppState {
   setError: (error: string | null) => void;
   saveEpisodeProgress: (episodeId: string, currentTime: number) => void;
   resetPlayer: () => void;
-}
-
-interface PersistedState {
-  currentEpisodeId: string | null;
-  currentTime: number;
-  episodeProgress: Record<string, number>;
+  saveToStorage: () => void;
 }
 
 export const usePodcastStore = create<PodcastStore>()(
@@ -200,10 +196,18 @@ export const usePodcastStore = create<PodcastStore>()(
           },
         }));
       },
+
+      saveToStorage: () => {
+        storage.set({
+          currentEpisodeId: usePodcastStore.getState().player.currentEpisode?.id || null,
+          currentTime: usePodcastStore.getState().player.currentTime,
+          episodeProgress: usePodcastStore.getState().episodeProgress,
+        });
+      },
     }),
     {
       name: 'podcast-store',
-      partialize: (state): PersistedState => ({
+      partialize: (state) => ({
         // Only persist minimal data: current episode ID and timestamp
         currentEpisodeId: state.player.currentEpisode?.id || null,
         currentTime: state.player.currentTime,
@@ -211,38 +215,40 @@ export const usePodcastStore = create<PodcastStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Get the persisted data from localStorage
-          const persistedData = localStorage.getItem('podcast-store');
-          if (persistedData) {
-            try {
-              const hydratedState: PersistedState = JSON.parse(persistedData).state;
+          // Log the rehydration process using our storage utility
+          console.log('🔄 Rehydrating store...');
+          const hydratedState = storage.get();
+          
+          if (hydratedState) {
+            // Restore currentEpisode from feeds if we have a saved episode ID
+            if (hydratedState.currentEpisodeId && state.feeds) {
+              let foundEpisode: PodcastEpisode | null = null;
               
-              // Restore currentEpisode from feeds if we have a saved episode ID
-              if (hydratedState.currentEpisodeId && state.feeds) {
-                let foundEpisode: PodcastEpisode | null = null;
-                
-                // Search through all feeds to find the episode
-                for (const feed of state.feeds) {
-                  const episode = feed.episodes.find(ep => ep.id === hydratedState.currentEpisodeId);
-                  if (episode) {
-                    foundEpisode = episode;
-                    break;
-                  }
-                }
-                
-                if (foundEpisode) {
-                  state.player.currentEpisode = foundEpisode;
-                  state.player.currentTime = hydratedState.currentTime || 0;
+              // Search through all feeds to find the episode
+              for (const feed of state.feeds) {
+                const episode = feed.episodes.find(ep => ep.id === hydratedState.currentEpisodeId);
+                if (episode) {
+                  foundEpisode = episode;
+                  break;
                 }
               }
               
-              // Restore episodeProgress
-              if (hydratedState.episodeProgress) {
-                state.episodeProgress = hydratedState.episodeProgress;
+              if (foundEpisode) {
+                state.player.currentEpisode = foundEpisode;
+                state.player.currentTime = hydratedState.currentTime || 0;
+                console.log('✅ Restored episode:', foundEpisode.title, 'at time:', hydratedState.currentTime);
+              } else {
+                console.log('❌ Episode not found in feeds:', hydratedState.currentEpisodeId);
               }
-            } catch (error) {
-              console.error('Error parsing persisted state:', error);
             }
+            
+            // Restore episodeProgress
+            if (hydratedState.episodeProgress) {
+              state.episodeProgress = hydratedState.episodeProgress;
+              console.log('✅ Restored episode progress for', Object.keys(hydratedState.episodeProgress).length, 'episodes');
+            }
+          } else {
+            console.log('ℹ️ No persisted state found');
           }
         }
       },

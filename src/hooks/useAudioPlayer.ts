@@ -40,6 +40,7 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
     updateCurrentTime,
     setVolume,
     saveEpisodeProgress,
+    saveToStorage,
   } = usePodcastStore();
 
   const currentEpisode = player.currentEpisode;
@@ -152,11 +153,12 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
     const interval = setInterval(() => {
       if (audioRef.current && player.currentTime > 0) {
         saveEpisodeProgress(currentEpisode.id, player.currentTime);
+        saveToStorage(); // Manually save to localStorage with logging
       }
     }, 2000); // Save every 2 seconds
 
     return () => clearInterval(interval);
-  }, [player.isPlaying, currentEpisode, player.currentTime, saveEpisodeProgress]);
+  }, [player.isPlaying, currentEpisode, player.currentTime, saveEpisodeProgress, saveToStorage]);
 
   // Cleanup on unmount
   useEffect(() => {
