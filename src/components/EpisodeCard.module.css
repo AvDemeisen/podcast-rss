@@ -1,9 +1,15 @@
 .episodeCard {
-  transition: box-shadow var(--transition-fast);
+  transition: all var(--transition-fast);
   box-shadow: var(--shadow-medium);
   border-radius: var(--border-radius-large);
   overflow: hidden;
   position: relative;
+  border: 2px solid transparent;
+}
+
+.episodeCard.playing {
+  border: 2px solid var(--primary-color);
+  background: rgba(25, 118, 210, 0.05);
 }
 
 .cardContent {
@@ -54,6 +60,11 @@
 .episodeCard:hover .playOverlay,
 .episodeCard:focus .playOverlay {
   opacity: 1;
+}
+
+.episodeCard.playing .playOverlay {
+  opacity: 1;
+  background: var(--overlay-bg-light);
 }
 
 .textBlock {

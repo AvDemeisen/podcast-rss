@@ -23,7 +23,7 @@ const getStatus = (isPlayed: boolean, isPlaying: boolean) => {
 
 const EpisodeCard: React.FC<EpisodeCardProps> = ({ episode, isHidden, isPlaying, isValid, onPlay }) => (
   <Card
-    className={styles.episodeCard}
+    className={`${styles.episodeCard} ${isPlaying ? styles.playing : ''}`}
     sx={{
       mb: 2,
       opacity: isHidden ? 0.5 : 1,
