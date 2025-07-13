@@ -16,9 +16,8 @@ import {
   SkipPrevious,
   SkipNext,
 } from '@mui/icons-material';
-import { usePodcastStore } from '../store/podcastStore';
+import { usePlayer } from '../contexts/PlayerContext';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
-import { useEpisodeManager } from '../hooks/useEpisodeManager';
 import { formatTime } from '../utils/formatters';
 
 import styles from './AudioPlayer.module.css';
@@ -26,10 +25,9 @@ import styles from './AudioPlayer.module.css';
 export default function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioState, audioActions] = useAudioPlayer(audioRef);
-  const [, episodeActions] = useEpisodeManager();
   
-  const { player, updateCurrentTime } = usePodcastStore();
-  const currentEpisode = player.currentEpisode;
+  const { playerState, updateCurrentTime } = usePlayer();
+  const currentEpisode = playerState.currentEpisode;
 
   if (!currentEpisode) return null;
 
@@ -93,9 +91,8 @@ export default function AudioPlayer() {
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 } }}>
             <IconButton 
-              onClick={episodeActions.playPrevious} 
-              disabled={episodeActions.getCurrentEpisodeIndex() <= 0 || audioState.isLoading}
               size="small"
+              disabled={audioState.isLoading}
             >
               <SkipPrevious />
             </IconButton>
@@ -112,7 +109,7 @@ export default function AudioPlayer() {
             >
               {audioState.isLoading ? (
                 <CircularProgress size={20} />
-              ) : player.isPlaying ? (
+              ) : playerState.isPlaying ? (
                 <Pause />
               ) : (
                 <PlayArrow />
@@ -120,9 +117,8 @@ export default function AudioPlayer() {
             </IconButton>
             
             <IconButton 
-              onClick={episodeActions.playNext} 
-              disabled={episodeActions.getCurrentEpisodeIndex() >= 999 || audioState.isLoading} // TODO: Get actual episode count
               size="small"
+              disabled={audioState.isLoading}
             >
               <SkipNext />
             </IconButton>
@@ -131,19 +127,19 @@ export default function AudioPlayer() {
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
           <Typography variant="caption" sx={{ minWidth: 40 }}>
-            {formatTime(player.currentTime)}
+            {formatTime(playerState.currentTime)}
           </Typography>
           
           <Slider
-            value={player.currentTime}
-            max={player.duration || 100}
+            value={playerState.currentTime}
+            max={playerState.duration || 100}
             onChange={(_, value) => audioActions.handleSeek(value)}
             sx={{ flex: 1, mx: { xs: 0, md: 2 }, minWidth: 0 }}
             disabled={!audioState.isReady || audioState.isLoading}
           />
           
           <Typography variant="caption" sx={{ minWidth: 40 }}>
-            {formatTime(player.duration)}
+            {formatTime(playerState.duration)}
           </Typography>
         </Box>
       </Box>

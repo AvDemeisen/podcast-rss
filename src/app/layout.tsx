@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import CssBaseline from '@mui/material/CssBaseline';
 import ClientThemeProvider from '../components/ClientThemeProvider';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { PlayerProvider } from '../contexts/PlayerContext';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -22,8 +23,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <ErrorBoundary>
           <ClientThemeProvider>
-            <CssBaseline />
-            {children}
+            <PlayerProvider>
+              <CssBaseline />
+              {children}
+            </PlayerProvider>
           </ClientThemeProvider>
         </ErrorBoundary>
       </body>

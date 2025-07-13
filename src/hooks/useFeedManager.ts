@@ -1,106 +1,73 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useState } from 'react';
-import { usePodcastStore } from '../store/podcastStore';
-import { FeedService } from '../services/feedService';
+import { useState, useEffect, useCallback } from 'react';
 import { PODCAST_FEEDS } from '../config/podcasts';
+import { PodcastFeed } from '../types/podcast';
+import { usePlayer } from '../contexts/PlayerContext';
 
-export interface FeedManagerState {
+interface FeedState {
+  feeds: PodcastFeed[];
   isLoading: boolean;
   error: string | null;
   feedsCount: number;
-  episodesCount: number;
   playerHydrated: boolean;
 }
 
-export interface FeedManagerActions {
-  initializeFeeds: () => Promise<void>;
-  retryLoad: () => Promise<void>;
+interface FeedActions {
+  retryLoad: () => void;
 }
 
-export const useFeedManager = (): [FeedManagerState, FeedManagerActions] => {
-  const [isHydrated, setIsHydrated] = useState(false);
+export const useFeedManager = (): [FeedState, FeedActions] => {
+  const [feeds, setFeeds] = useState<PodcastFeed[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [playerHydrated, setPlayerHydrated] = useState(false);
   
-  const {
-    feeds,
-    isLoading,
-    error,
-    setLoading,
-    setError,
-    setFeeds,
-    player,
-    setPlayerState,
-    episodeProgress,
-  } = usePodcastStore();
+  const { restoreEpisodeFromFeeds } = usePlayer();
 
-  // Wait for hydration to complete
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
-  // Initialize feeds on component mount after hydration
-  useEffect(() => {
-    if (isHydrated && feeds.length === 0) {
-      initializeFeeds();
-    }
-  }, [isHydrated, feeds.length]);
-
-  // After feeds are loaded, restore player state with correct episode object
-  useEffect(() => {
-    if (feeds.length > 0) {
-      if (player.currentEpisode) {
-        const allEpisodes = feeds.flatMap(feed => feed.episodes);
-        const match = allEpisodes.find(ep => ep.id === player.currentEpisode?.id);
-        if (match) {
-          setPlayerState({ currentEpisode: match });
-          // Restore currentTime if available
-          const saved = episodeProgress[match.id];
-          if (typeof saved === 'number' && saved > 0) {
-            setPlayerState({ currentTime: saved });
-          }
-        } else {
-          // Episode not found in new feeds, clear player
-          setPlayerState({ currentEpisode: null, isPlaying: false, currentTime: 0, duration: 0 });
-        }
-      }
-      setPlayerHydrated(true);
-    }
-  }, [feeds, player.currentEpisode?.id]);
-
-  const initializeFeeds = async (): Promise<void> => {
-    setLoading(true);
+  const loadFeeds = useCallback(async () => {
+    setIsLoading(true);
     setError(null);
     
     try {
-      const feedUrls = PODCAST_FEEDS.map(feed => feed.url);
-      const loadedFeeds = await FeedService.fetchMultipleFeeds(feedUrls);
+      const feedPromises = PODCAST_FEEDS.map(async (configFeed) => {
+        const response = await fetch(`/api/parse-feed?url=${encodeURIComponent(configFeed.url)}`);
+        if (!response.ok) {
+          throw new Error(`Failed to parse RSS feed: ${configFeed.name}`);
+        }
+        return await response.json();
+      });
+
+      const loadedFeeds = await Promise.all(feedPromises);
       setFeeds(loadedFeeds);
+      
+      // After feeds are loaded, try to restore the saved episode
+      restoreEpisodeFromFeeds(loadedFeeds);
+      setPlayerHydrated(true);
+      
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load feeds';
-      setError(errorMessage);
-      console.error('Feed initialization error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load feeds');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }, [restoreEpisodeFromFeeds]);
 
-  const retryLoad = async (): Promise<void> => {
-    await initializeFeeds();
-  };
+  useEffect(() => {
+    loadFeeds();
+  }, [loadFeeds]);
 
-  const feedsCount = feeds.length;
-  const episodesCount = feeds.reduce((total, feed) => total + feed.episodes.length, 0);
+  const retryLoad = useCallback(() => {
+    loadFeeds();
+  }, [loadFeeds]);
 
-  const state: FeedManagerState = {
+  const state: FeedState = {
+    feeds,
     isLoading,
     error,
-    feedsCount,
-    episodesCount,
+    feedsCount: feeds.length,
     playerHydrated,
   };
 
-  const actions: FeedManagerActions = {
-    initializeFeeds,
+  const actions: FeedActions = {
     retryLoad,
   };
 

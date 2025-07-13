@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useRef, useState, RefObject } from 'react';
-import { usePodcastStore } from '../store/podcastStore';
+import { usePlayer } from '../contexts/PlayerContext';
 import { 
   handleAudioError, 
   validateEpisodeForPlayback,
@@ -33,20 +33,26 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
   const playAttemptRef = useRef<Promise<void> | null>(null);
 
   const {
-    player,
+    playerState,
     episodeProgress,
-    setPlayerState,
+    playEpisode,
     pauseEpisode,
     updateCurrentTime,
     setVolume,
     saveEpisodeProgress,
-    saveToStorage,
-  } = usePodcastStore();
+    setDuration,
+  } = usePlayer();
 
-  const currentEpisode = player.currentEpisode;
+  const currentEpisode = playerState.currentEpisode;
 
   // Handle episode change
   useEffect(() => {
+    console.log('🎧 Audio player: episode changed', {
+      episodeId: currentEpisode?.id,
+      episodeTitle: currentEpisode?.title,
+      audioUrl: currentEpisode?.audioUrl,
+    });
+    
     if (!currentEpisode) {
       setIsReady(false);
       setIsLoading(false);
@@ -56,6 +62,7 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
 
     const audio = audioRef.current;
     if (!audio) {
+      console.log('🎧 Audio player: no audio ref');
       return;
     }
 
@@ -68,6 +75,8 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
       setIsLoading(false);
       return;
     }
+
+    console.log('🎧 Audio player: loading episode', currentEpisode.title);
 
     // Reset state
     setIsReady(false);
@@ -84,8 +93,8 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
     audio.pause();
     audio.currentTime = 0;
     audio.src = currentEpisode.audioUrl;
-    audio.volume = player.volume;
-    audio.muted = player.isMuted;
+    audio.volume = playerState.volume;
+    audio.muted = playerState.isMuted;
 
     // Load the new audio
     audio.load();
@@ -107,22 +116,22 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
         ]
       });
     }
-  }, [currentEpisode?.id, currentEpisode?.audioUrl, player.volume, player.isMuted, episodeProgress, updateCurrentTime, audioRef]);
+  }, [currentEpisode?.id, currentEpisode?.audioUrl, playerState.volume, playerState.isMuted, episodeProgress, updateCurrentTime, audioRef]);
 
   // Handle volume/mute changes
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = player.volume;
-      audioRef.current.muted = player.isMuted;
+      audioRef.current.volume = playerState.volume;
+      audioRef.current.muted = playerState.isMuted;
     }
-  }, [player.volume, player.isMuted, audioRef]);
+  }, [playerState.volume, playerState.isMuted, audioRef]);
 
   // Handle play/pause state changes
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !isReady || isLoading) return;
 
-    if (player.isPlaying) {
+    if (playerState.isPlaying) {
       // Cancel any existing play attempt
       if (playAttemptRef.current) {
         playAttemptRef.current = Promise.resolve();
@@ -134,7 +143,8 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
         const audioError = handleAudioError(error, currentEpisode?.id);
         if (audioError.type !== 'play') { // Don't show abort errors
           setError(audioError);
-          setPlayerState({ isPlaying: false });
+          // We need to update the player state to reflect the pause
+          pauseEpisode();
         }
       });
     } else {
@@ -144,21 +154,20 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
         playAttemptRef.current = Promise.resolve();
       }
     }
-  }, [player.isPlaying, isReady, isLoading, setPlayerState, currentEpisode?.id, audioRef]);
+  }, [playerState.isPlaying, isReady, isLoading, pauseEpisode, currentEpisode?.id, audioRef]);
 
   // Save progress every few seconds while playing
   useEffect(() => {
-    if (!player.isPlaying || !currentEpisode) return;
+    if (!playerState.isPlaying || !currentEpisode) return;
 
     const interval = setInterval(() => {
-      if (audioRef.current && player.currentTime > 0) {
-        saveEpisodeProgress(currentEpisode.id, player.currentTime);
-        saveToStorage(); // Manually save to localStorage with logging
+      if (audioRef.current && playerState.currentTime > 0) {
+        saveEpisodeProgress(currentEpisode.id, playerState.currentTime);
       }
-    }, 2000); // Save every 2 seconds
+    }, 5000); // Save every 5 seconds
 
     return () => clearInterval(interval);
-  }, [player.isPlaying, currentEpisode, player.currentTime, saveEpisodeProgress, saveToStorage]);
+  }, [playerState.isPlaying, currentEpisode, playerState.currentTime, saveEpisodeProgress]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -174,21 +183,32 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
   }, [audioRef]);
 
   const handlePlayPause = () => {
+    console.log('🎧 handlePlayPause called', {
+      isLoading,
+      isReady,
+      isPlaying: playerState.isPlaying,
+      currentEpisode: currentEpisode?.title,
+    });
+    
     if (isLoading || !isReady) return;
     
-    if (player.isPlaying) {
+    if (playerState.isPlaying) {
       if (currentEpisode) {
-        saveEpisodeProgress(currentEpisode.id, player.currentTime);
+        saveEpisodeProgress(currentEpisode.id, playerState.currentTime);
       }
       pauseEpisode();
     } else {
-      setPlayerState({ isPlaying: true });
+      // We need to update the player state to reflect play
+      // This will be handled by the playEpisode function
+      if (currentEpisode) {
+        playEpisode(currentEpisode);
+      }
     }
   };
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setPlayerState({ duration: audioRef.current.duration });
+      setDuration(audioRef.current.duration);
       setIsReady(true);
       setError(null);
       setIsLoading(false);
@@ -217,7 +237,7 @@ export const useAudioPlayer = (audioRef: RefObject<HTMLAudioElement | null>): [A
     if (currentEpisode) {
       saveEpisodeProgress(currentEpisode.id, 0); // Reset progress when finished
     }
-    setPlayerState({ isPlaying: false });
+    pauseEpisode();
     // Auto-play next episode logic would go here
   };
 

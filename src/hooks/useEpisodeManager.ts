@@ -1,120 +1,59 @@
-import { useState, useMemo } from 'react';
-import { usePodcastStore } from '../store/podcastStore';
-import { PodcastEpisode } from '../types/podcast';
-import { isValidEpisode } from '../utils/validators';
+import { useState, useCallback, useMemo } from 'react';
+import { PodcastEpisode, PodcastFeed } from '../types/podcast';
+import { usePlayer } from '../contexts/PlayerContext';
 
-export interface EpisodeManagerState {
-  currentPage: number;
-  episodesPerPage: number;
-  totalPages: number;
-  currentEpisodes: PodcastEpisode[];
+interface EpisodeState {
   allEpisodes: PodcastEpisode[];
+  currentEpisodes: PodcastEpisode[];
+  currentPage: number;
+  totalPages: number;
 }
 
-export interface EpisodeManagerActions {
+interface EpisodeActions {
   setCurrentPage: (page: number) => void;
-  getCurrentEpisodeIndex: () => number;
-  playNext: () => void;
-  playPrevious: () => void;
-  handlePlayEpisode: (episode: PodcastEpisode) => void;
   isCurrentlyPlaying: (episode: PodcastEpisode) => boolean;
+  handlePlayEpisode: (episode: PodcastEpisode) => void;
 }
 
-export const useEpisodeManager = (episodesPerPage: number = 10): [EpisodeManagerState, EpisodeManagerActions] => {
+export const useEpisodeManager = (episodesPerPage: number, feeds: PodcastFeed[] = []): [EpisodeState, EpisodeActions] => {
   const [currentPage, setCurrentPage] = useState(1);
   
-  const {
-    feeds,
-    player,
-    playEpisode,
-    pauseEpisode,
-    markEpisodeAsPlayed,
-  } = usePodcastStore();
+  const { playerState, playEpisode } = usePlayer();
 
-  // Combine all episodes and sort by date
+  // Combine all episodes from feeds and sort by date
   const allEpisodes = useMemo(() => {
     return feeds
       .flatMap(feed => feed.episodes)
       .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
   }, [feeds]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(allEpisodes.length / episodesPerPage);
+  // Calculate current episodes to display
   const startIndex = (currentPage - 1) * episodesPerPage;
   const endIndex = startIndex + episodesPerPage;
   const currentEpisodes = allEpisodes.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(allEpisodes.length / episodesPerPage);
 
-  const getCurrentEpisodeIndex = (): number => {
-    if (!player.currentEpisode) return -1;
-    return allEpisodes.findIndex(ep => ep.id === player.currentEpisode!.id);
-  };
+  // Check if episode is currently playing
+  const isCurrentlyPlaying = useCallback((episode: PodcastEpisode) => {
+    return playerState.currentEpisode?.id === episode.id && playerState.isPlaying;
+  }, [playerState.currentEpisode?.id, playerState.isPlaying]);
 
-  const playNext = (): void => {
-    const currentIndex = getCurrentEpisodeIndex();
-    if (currentIndex < allEpisodes.length - 1) {
-      const nextEpisode = allEpisodes[currentIndex + 1];
-      if (isValidEpisode(nextEpisode)) {
-        playEpisode(nextEpisode);
-        markEpisodeAsPlayed(nextEpisode.id);
-      }
-    }
-  };
+  // Handle play episode
+  const handlePlayEpisode = useCallback((episode: PodcastEpisode) => {
+    playEpisode(episode);
+  }, [playEpisode]);
 
-  const playPrevious = (): void => {
-    const currentIndex = getCurrentEpisodeIndex();
-    if (currentIndex > 0) {
-      const prevEpisode = allEpisodes[currentIndex - 1];
-      if (isValidEpisode(prevEpisode)) {
-        playEpisode(prevEpisode);
-        markEpisodeAsPlayed(prevEpisode.id);
-      }
-    }
-  };
-
-  const handlePlayEpisode = (episode: PodcastEpisode): void => {
-    if (!isValidEpisode(episode)) {
-      console.error('Invalid episode for playback:', episode);
-      return;
-    }
-    if (player.currentEpisode?.id === episode.id) {
-      if (player.isPlaying) {
-        // Pause if already playing
-        pauseEpisode();
-      } else {
-        // Resume if paused
-        playEpisode(episode);
-      }
-    } else {
-      playEpisode(episode);
-      markEpisodeAsPlayed(episode.id);
-    }
-  };
-
-  const isCurrentlyPlaying = (episode: PodcastEpisode): boolean => {
-    return player.currentEpisode?.id === episode.id && player.isPlaying;
-  };
-
-  const handlePageChange = (page: number): void => {
-    setCurrentPage(page);
-    // Scroll to top when changing pages
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const state: EpisodeManagerState = {
-    currentPage,
-    episodesPerPage,
-    totalPages,
-    currentEpisodes,
+  const state: EpisodeState = {
     allEpisodes,
+    currentEpisodes,
+    currentPage,
+    totalPages,
   };
 
-  const actions: EpisodeManagerActions = {
-    setCurrentPage: handlePageChange,
-    getCurrentEpisodeIndex,
-    playNext,
-    playPrevious,
-    handlePlayEpisode,
+  const actions: EpisodeActions = {
+    setCurrentPage,
     isCurrentlyPlaying,
+    handlePlayEpisode,
   };
 
   return [state, actions];

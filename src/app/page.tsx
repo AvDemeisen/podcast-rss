@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import {
   Container,
@@ -10,7 +10,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { usePodcastStore } from '../store/podcastStore';
+import { usePlayer } from '../contexts/PlayerContext';
 import { useFeedManager } from '../hooks/useFeedManager';
 import { useEpisodeManager } from '../hooks/useEpisodeManager';
 import { isValidEpisode } from '../utils/validators';
@@ -22,19 +22,12 @@ import EpisodeList from '../components/EpisodeList';
 
 export default function Home() {
   const [feedState, feedActions] = useFeedManager();
-  const [episodeState, episodeActions] = useEpisodeManager(UI_CONSTANTS.EPISODES_PER_PAGE);
+  const [episodeState, episodeActions] = useEpisodeManager(UI_CONSTANTS.EPISODES_PER_PAGE, feedState.feeds);
   const [selectedPodcast, setSelectedPodcast] = useState<string | null>(null);
   
-  const { hiddenEpisodes, hideEpisode, showEpisode, player } = usePodcastStore();
-  const currentEpisode = player.currentEpisode;
-  const isPlaying = player.isPlaying && currentEpisode;
-
-  useEffect(() => {
-    // Log the initial zustand store state for debugging
-    const state = usePodcastStore.getState();
-    // eslint-disable-next-line no-console
-    console.log('Zustand initial state:', state);
-  }, []);
+  const { playerState } = usePlayer();
+  const currentEpisode = playerState.currentEpisode;
+  const isPlaying = playerState.isPlaying && currentEpisode;
 
   // Get unique podcasts from episodes
   const podcasts = episodeState.allEpisodes
@@ -133,9 +126,9 @@ export default function Home() {
               totalPages={totalPages}
               onPageChange={handlePageChange}
               episodeActions={episodeActions}
-              hiddenEpisodes={hiddenEpisodes}
-              showEpisode={showEpisode}
-              hideEpisode={hideEpisode}
+              hiddenEpisodes={new Set()}
+              showEpisode={() => {}}
+              hideEpisode={() => {}}
               isCurrentlyPlaying={episodeActions.isCurrentlyPlaying}
               handlePlayEpisode={episodeActions.handlePlayEpisode}
               isValidEpisode={isValidEpisode}
@@ -161,7 +154,7 @@ export default function Home() {
         </Box>
 
         {/* Audio Player */}
-        {feedState.playerHydrated && player.currentEpisode && <AudioPlayer />}
+        {feedState.playerHydrated && playerState.currentEpisode && <AudioPlayer />}
       </Container>
     </>
   );
